@@ -77,7 +77,7 @@ def distace(model, distpath, distout):
 			case1, case2 = temp[0]+".txt", temp[1]+".txt"
 			try:
 				sim = model.wv.similarity(case1, case2)
-				outline = temp[0]+" "+temp[1]+str(sim)
+				outline = temp[0]+" "+temp[1]+" "+str(sim)
 				fo.write(outline+"\n")
 			except KeyError as error:
 				print(error)
