@@ -2,9 +2,11 @@ import datetime
 import pickle
 import pandas as pd 
 from tqdm import tqdm
+import psutil
 import progressbar
 import networkx as nx
 from node2vec import Node2Vec 
+from gensim.models import Word2Vec
 
 def reverse_dict(D):
 	rD = {}
@@ -136,19 +138,20 @@ def node2vec_graph(D, gpath):
 
 def node2vec(G, gpath):
 	embout = gpath+'Embeddings'
-	node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=4) 
+	node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=int(psutil.cpu_count())) 
 	model = node2vec.fit(window=5, min_count=1, batch_words=5)
+	print('Saving')
 	model.wv.save_word2vec_format(embout)
-	print("Embeddings saved at "+embout)
+	model.save(gpath+'node2vec.model')
+	print('Getting Similarity')
 	return model
-
 
 def distace(model, distpath, distout):
 	fo = open(distout, 'w')
 	with open(distpath, 'r') as file:
 		for line in file:
-			temp = line.split()
-			case1, case2 = temp[0], temp[1]
+			temp = line.split('-->')
+			case1, case2 = temp[0].split('.')[0], temp[1].split('.')[0]
 			try:
 				sim = model.wv.similarity(case1, case2)
 				outline = temp[0]+" "+temp[1]+" "+str(sim)
@@ -166,17 +169,32 @@ if __name__ == '__main__':
 
 	print('Enter 1 to Read Data and save dictionaries')
 	print('Enter 2 to generate and save node2vec graph')
-	print('Enter 3 to run node2vec on generated graph and get Embeddings similarity')
-	print('Enter 4 to do both 2 and 3')
-	print('Enter 5 to do all')
+	print('Enter 3 to run node2vec on generated graph')
+	print('Enter 4 to get Embeddings similarity')
+	print('Enter 5 to do both 2 and 3')
+	print('Enter 6 to do all')
 	q = int(input('Enter : '))
-	if q == 5:
+	if q == 6:
 		c_a, a_c = read_data('parth_kg_embed/g1_doc_actsec.txt')
-		node2vec(node2vec_graph(c_a, gpath), gpath)
-	elif q == 4:
+		model = node2vec(node2vec_graph(c_a, gpath), gpath)
+		#Negative Samples
+		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim.txt')
+		#Positive Samples
+		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim.txt')
+	elif q == 5:
 		with open(dict_path, 'rb') as file:
 			c_a = pickle.load(file)
-		node2vec(node2vec_graph(c_a, gpath), gpath)
+		model = node2vec(node2vec_graph(c_a, gpath), gpath)
+		#Negative Samples
+		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim.txt')
+		#Positive Samples
+		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim.txt')
+	elif q == 4:
+		model = Word2Vec.load(gpath+'node2vec.model')
+		#Negative Samples
+		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim.txt')
+		#Positive Samples
+		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim.txt')
 	elif q == 3:
 		G = nx.read_gpickle(gpath+'network.gpickle')
 		node2vec(G, gpath)
