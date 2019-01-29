@@ -50,8 +50,6 @@ def read_data(path):
 		for line in file:
 			bar.update(count)
 			count += 1
-			if count == 100:
-				break
 			temp = line.split(".txt-->")
 			if len(temp) == 1:
 				temp = line.split(".txt--->")
