@@ -67,6 +67,11 @@ def main():
 		num_cores = multiprocessing.cpu_count()
 		print('Running on {} cores'.format(num_cores))
 		results = Parallel(n_jobs=num_cores)(delayed(metapath_gen)(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict) for i in tqdm(case_act_dict))	
+		print('Saving metapaths as txt')
+		with open(outpath, 'w') as file:
+			for i in tqdm(results):
+				for j in i:
+					file.write(j)
 	if task == 2 or task == 4:
 		metapath2vec(code_dir = metapath2vec_dir, outpath = outpath, embout = embout)
 	if task == 3:

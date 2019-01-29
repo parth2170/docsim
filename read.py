@@ -33,12 +33,13 @@ def special(D):
 	'''
 	return D
 
+no_act_cases = []
+
 def read_data(path):
 	case_act_sec_dict = {}
 	act_case_dict = {}
 	all_cases = []
 	all_acts_sec = []
-	no_act_cases = 0
 	no_date_acts_unique = 0
 	no_date_acts_multiple = 0
 	special_cases = {}
@@ -49,6 +50,8 @@ def read_data(path):
 		for line in file:
 			bar.update(count)
 			count += 1
+			if count == 100:
+				break
 			temp = line.split(".txt-->")
 			if len(temp) == 1:
 				temp = line.split(".txt--->")
@@ -57,7 +60,7 @@ def read_data(path):
 			all_cases.append(case)
 			if len(temp) == 2 and (temp[1] == '\n' or temp[1] == ''):
 				case_act_sec_dict.pop(case, None)
-				no_act_cases +=1
+				no_act_cases.append(case)
 				continue
 			acts = temp[1].split('$$$')
 			if acts[-1][-1] == '\n':
@@ -112,7 +115,7 @@ def read_data(path):
 	act_case_dict = reverse_dict(case_act_sec_dict)
 	all_acts_sec = list(set(all_acts_sec))
 	print('Total number of acts_sections cited = {}'.format(len(all_acts_sec)))
-	print('No act cases = {}'.format(no_act_cases))
+	print('No act cases = {}'.format(len(no_act_cases)))
 	print('no_date_acts_unique = {}'.format(no_date_acts_unique))
 	print('no_date_acts_multiple = {}'.format(no_date_acts_multiple))
 	
@@ -137,12 +140,12 @@ def node2vec_graph(D, gpath):
 	return G
 
 def node2vec(G, gpath):
-	embout = gpath+'Embeddings'
-	node2vec = Node2Vec(G, dimensions=64, walk_length=30, num_walks=200, workers=int(psutil.cpu_count())) 
+	embout = gpath+'Embeddings128'
+	node2vec = Node2Vec(G, dimensions=128, walk_length=30, num_walks=200, workers=int(psutil.cpu_count())) 
 	model = node2vec.fit(window=5, min_count=1, batch_words=5)
 	print('Saving')
 	model.wv.save_word2vec_format(embout)
-	model.save(gpath+'node2vec.model')
+	model.save(gpath+'node2vec.model128')
 	print('Getting Similarity')
 	return model
 
@@ -152,6 +155,12 @@ def distace(model, distpath, distout):
 		for line in file:
 			temp = line.split('-->')
 			case1, case2 = temp[0].split('.')[0], temp[1].split('.')[0]
+			if case1 in no_act_cases:
+				print('{} does not cite any act'.format(case1))
+				break
+			if case2 in no_act_cases:
+				print('{} does not cite any act'.format(case2))
+				break
 			try:
 				sim = model.wv.similarity(case1, case2)
 				outline = temp[0]+" "+temp[1]+" "+str(sim)
@@ -178,23 +187,23 @@ if __name__ == '__main__':
 		c_a, a_c = read_data('parth_kg_embed/g1_doc_actsec.txt')
 		model = node2vec(node2vec_graph(c_a, gpath), gpath)
 		#Negative Samples
-		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim.txt')
+		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim128.txt')
 		#Positive Samples
-		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim.txt')
+		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim128.txt')
 	elif q == 5:
 		with open(dict_path, 'rb') as file:
 			c_a = pickle.load(file)
 		model = node2vec(node2vec_graph(c_a, gpath), gpath)
 		#Negative Samples
-		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim.txt')
+		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim128.txt')
 		#Positive Samples
-		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim.txt')
+		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim128.txt')
 	elif q == 4:
 		model = Word2Vec.load(gpath+'node2vec.model')
 		#Negative Samples
-		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim.txt')
+		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim128.txt')
 		#Positive Samples
-		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim.txt')
+		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim128.txt')
 	elif q == 3:
 		G = nx.read_gpickle(gpath+'network.gpickle')
 		node2vec(G, gpath)
