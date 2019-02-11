@@ -36,6 +36,8 @@ def special(D):
 no_act_cases = []
 
 def read_data(path):
+	print('Reading Test data')
+	test = read_test('parth_kg_embed/test_cases.txt')
 	case_act_sec_dict = {}
 	act_case_dict = {}
 	all_cases = []
@@ -88,7 +90,9 @@ def read_data(path):
 						if ycheck == rowj[0].split('_')[0] and rowj[1] != None:
 							years.append(rowj[1].split('_')[0])
 					if len(set(years)) == 1:
-						deleter.append(index)
+						if row[0].split('_')[1]:
+							row[1] = years[0] + '_' + row[0].split('_')[1]
+							row[0] = row[0].split('_')[0]
 						no_date_acts_unique += 1
 					elif len(set(years)) > 1:
 						deleter.append(index)
@@ -101,7 +105,7 @@ def read_data(path):
 				if row[1] == None:
 					acts.append(row[0])
 				else:
-					acts.append(row[0] + ', ' + row[1])
+					acts.append(row[0] + ',' + row[1])
 			case_act_sec_dict[case] = acts
 			all_acts_sec.extend(acts)
 	print('\nNumber of special cases = {}'.format(len(special_cases)))
@@ -109,6 +113,7 @@ def read_data(path):
 	#Handle special cases and append to main dictionaries
 	#special_cases = special(special_cases)
 	case_act_sec_dict = dict(case_act_sec_dict, **special_cases)
+	case_act_sec_dict = dict(case_act_sec_dict, **test)
 	print('Making Act --> Case Dictionary')
 	act_case_dict = reverse_dict(case_act_sec_dict)
 	all_acts_sec = list(set(all_acts_sec))
@@ -116,7 +121,6 @@ def read_data(path):
 	print('No act cases = {}'.format(len(no_act_cases)))
 	print('no_date_acts_unique = {}'.format(no_date_acts_unique))
 	print('no_date_acts_multiple = {}'.format(no_date_acts_multiple))
-	
 	print('Saving')
 	#Save the dictionaries
 	with open('saved/case_act_sec_dict.pickle', 'wb') as file:
@@ -125,6 +129,36 @@ def read_data(path):
 		pickle.dump(act_case_dict, file)
 	
 	return case_act_sec_dict, act_case_dict
+
+def read_test(path):
+	t1 = datetime.datetime.now()
+	data = {}
+	with open(path, 'r') as file:
+		for line in file:
+			temp = line.split(".txt-->")
+			case = temp[0]
+			if case == '1995_E_8.txt':
+				continue
+			temp[1] = temp[1].replace("$$ ", "$$$")
+			temp = temp[1][:-1].split("$$$")
+			acts = []
+			for i in range(len(temp)):
+				t = temp[i].split(" or ")
+				if(len(t) > 1):
+					prefix = t[0].split("_")[0] + "-"
+					prefix = prefix.strip('$')
+					for j in range(1, len(t)):
+						t[j] = (prefix+t[j]).strip()
+					acts.extend(t)
+				else:
+					t[0] = t[0].strip()
+					t[0] = t[0].strip("$")
+					acts.append(t[0].strip())
+			data[case] = list(set(acts))
+	t2 = datetime.datetime.now()
+	print("File Read, Time taken = {} microseconds".format((t2-t1).microseconds))
+	return data
+
 
 def node2vec_graph(D, gpath):
 	t1 = datetime.datetime.now()
@@ -182,7 +216,7 @@ if __name__ == '__main__':
 	print('Enter 6 to do all')
 	q = int(input('Enter : '))
 	if q == 6:
-		c_a, a_c = read_data('parth_kg_embed/g1_doc_actsec.txt')
+		c_a, a_c = read_data('parth_kg_embed/doc-sec-cit.txt')
 		model = node2vec(node2vec_graph(c_a, gpath), gpath)
 		#Negative Samples
 		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim128.txt')
@@ -210,7 +244,7 @@ if __name__ == '__main__':
 			c_a = pickle.load(file)
 		G = node2vec_graph(c_a, gpath)
 	elif q == 1:
-		c_a, a_c = read_data('parth_kg_embed/g1_doc_actsec.txt')
+		c_a, a_c = read_data('parth_kg_embed/doc-sec-cit.txt')
 	else:
 		print('Invalid Choice')
 
