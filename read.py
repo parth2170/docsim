@@ -19,21 +19,24 @@ def reverse_dict(D):
 				rD[j].append(i)
 	return rD
 
-def special(D):
-	'''
-	clean = {}
-	for case in D:
-		if len(D[case]) == 1:
-			clean[case] = D[case]
-		for act in D[case]:
-			temp = act.split(',')
-			if len(temp) != 2:
-				print(act)
-		print('')
-	'''
-	return D
-
 no_act_cases = []
+
+def correction(acts):
+	for act in list(set(acts.keys())):
+		if 'Constitution of India' in act:
+			acts[('Constitution_'+act.split('_')[1]).lower()] = acts.pop(act)
+			continue			
+		if 'Criminal Procedure Code' in act:
+			acts[('Code of Criminal Procedure, '+act.split(', ')[1]).lower()] = acts.pop(act)
+			continue
+		if 'Civil Procedure Code' in act:
+			acts[('Code of Civil Procedure, '+act.split(', ')[1]).lower()] = acts.pop(act)
+			continue
+		if 'Indian Penal Code,  ' in act:
+			acts[(act.split(', ')[0]+'_'+act.split(', ')[1].split('_')[1]).lower()] = acts.pop(act)
+			continue
+		acts[act.lower()] = acts.pop(act)
+	return acts
 
 def read_data(path):
 	print('Reading Test data')
@@ -116,6 +119,8 @@ def read_data(path):
 	case_act_sec_dict = dict(case_act_sec_dict, **test)
 	print('Making Act --> Case Dictionary')
 	act_case_dict = reverse_dict(case_act_sec_dict)
+	act_case_dict = correction(act_case_dict)
+	case_act_sec_dict = reverse_dict(act_case_dict)
 	all_acts_sec = list(set(all_acts_sec))
 	print('Total number of acts_sections cited = {}'.format(len(all_acts_sec)))
 	print('No act cases = {}'.format(len(no_act_cases)))
@@ -173,7 +178,7 @@ def node2vec_graph(D, gpath):
 
 def node2vec(G, gpath):
 	embout = gpath+'Embeddings128'
-	node2vec = Node2Vec(G, dimensions=128, walk_length=30, num_walks=200, workers=int(psutil.cpu_count())) 
+	node2vec = Node2Vec(G, dimensions=128, walk_length=30, num_walks=100, workers=int(psutil.cpu_count())) 
 	model = node2vec.fit(window=5, min_count=1, batch_words=5)
 	print('Saving')
 	model.wv.save_word2vec_format(embout)
@@ -207,7 +212,7 @@ if __name__ == '__main__':
 
 	gpath = 'saved/'
 	dict_path = 'saved/case_act_sec_dict.pickle'
-
+	print('Enter 0 for analysis on small data')
 	print('Enter 1 to Read Data and save dictionaries')
 	print('Enter 2 to generate and save node2vec graph')
 	print('Enter 3 to run node2vec on generated graph')
@@ -245,7 +250,12 @@ if __name__ == '__main__':
 		G = node2vec_graph(c_a, gpath)
 	elif q == 1:
 		c_a, a_c = read_data('parth_kg_embed/doc-sec-cit.txt')
+	elif q == 0:
+		c_a = read_test('parth_kg_embed/test_cases.txt')
+		a_c = reverse_dict(c_a)
+		a_c = correction(a_c)
+		c_a = reverse_dict(a_c)
+		model = node2vec(node2vec_graph(c_a, gpath+'small'), gpath+'small')
 	else:
 		print('Invalid Choice')
-
 
