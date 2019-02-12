@@ -19,12 +19,12 @@ def metapath_gen(case, act_case_dict, outpath, numwalks, walklength, case_act_di
 			numa = len(acts)
 			actid = random.randrange(numa)
 			act = acts[actid]
-			outline += " " + act
+			outline += " " + str(act)
 			cases = act_case_dict[act]
 			numc = len(cases)
 			caseid = random.randrange(numc)
 			case = cases[caseid]
-			outline += " " + case
+			outline += " " + str(case)
 		outfile.append(outline + "\n")
 	return outfile
 
@@ -58,15 +58,18 @@ def main():
 	print("Enter 4 to 1 and 2")
 	task = int(input("Enter : "))
 	if task == 1 or task == 4:
-		numwalks = 200
+		numwalks = 100
 		walklength = 30
-		with open('saved/case_act_sec_dict.pickle', 'rb') as file:
+		with open('saved/case_act_sec_dict_std.pickle', 'rb') as file:
 			case_act_dict = pickle.load(file)
-		with open('saved/act_case_dict.pickle', 'rb') as file:
+		with open('saved/act_case_dict_std.pickle', 'rb') as file:
 			act_case_dict = pickle.load(file)
 		num_cores = multiprocessing.cpu_count()
-		print('Running on {} cores'.format(num_cores))
-		results = Parallel(n_jobs=num_cores)(delayed(metapath_gen)(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict) for i in tqdm(case_act_dict))	
+		#print('Running on {} cores'.format(num_cores))
+		#results = Parallel(n_jobs=num_cores)(delayed(metapath_gen)(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict) for i in tqdm(case_act_dict))	
+		results = []
+		for i in tqdm(case_act_dict):
+			results.append(metapath_gen(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict))
 		print('Saving metapaths as txt')
 		with open(outpath, 'w') as file:
 			for i in tqdm(results):
