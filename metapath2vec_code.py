@@ -46,27 +46,66 @@ def distance(code_dir, embout):
 	cmd = "./distance ../"+embout
 	os.system(cmd)
 
+def reverse_dict(D):
+	rD = {}
+	for i in tqdm(D):
+		for j in D[i]:
+			try:
+				rD[j].append(i)
+			except KeyError:
+				rD[j] = []
+				rD[j].append(i)
+	return rD
+
+def make_acts_to_case(act_case_dict):
+	act_case = {}
+	print('Making act-->case dict')
+	for sec in tqdm(act_case_dict):
+		cases = act_case_dict[sec]
+		act = sec.split('_')[0]
+		try:
+			act_case[act].extend(cases)
+		except:
+			act_case[act] = cases
+	act_case = act_codes(act_case)
+	print('Making case-->act dictionay')
+	case_act_dict = reverse_dict(act_case)
+	return case_act_dict, act_case
+
+def act_codes(act_case_dict):
+	print('Coding Acts')
+	j = 0
+	codes = {}
+	for i in act_case_dict:
+		codes[j] = act_case_dict[i]
+		j += 1
+	return codes
+
 def main():
 	outpath = "saved/metapaths.txt"
 	embout = "saved/metapath2vec_embeddings"
 	metapath2vec_dir = "/Users/deepthought/code/docsim/code_metapath2vec"
 
 	print("Please specify all the parameters and paths in the script itself")
+	print("Enter 0 to run on small network only")
 	print("Enter 1 to generate metapaths")
 	print("Enter 2 to run metapath2vec on generated metapaths")
 	print("Enter 3 to run distance on generated embeddings")
 	print("Enter 4 to 1 and 2")
 	task = int(input("Enter : "))
-	if task == 1 or task == 4:
+	if task == 1 or task == 4 or task ==0:
 		numwalks = 100
 		walklength = 30
-		with open('saved/case_act_sec_dict_std.pickle', 'rb') as file:
-			case_act_dict = pickle.load(file)
-		with open('saved/act_case_dict_std.pickle', 'rb') as file:
-			act_case_dict = pickle.load(file)
+		if task == 0:
+			with open('saved/smallact_case_dict.pickle', 'rb') as file:
+				act_case_dict = pickle.load(file)
+			outpath = "saved/small_metapaths.txt"
+			embout = "saved/small_metapath2vec_embeddings"
+		else:	
+			with open('saved/sec_case_dict.pickle', 'rb') as file:
+				act_case_sec_dict = pickle.load(file)
+		case_act_dict, act_case_dict = make_acts_to_case(act_case_sec_dict)
 		num_cores = multiprocessing.cpu_count()
-		#print('Running on {} cores'.format(num_cores))
-		#results = Parallel(n_jobs=num_cores)(delayed(metapath_gen)(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict) for i in tqdm(case_act_dict))	
 		results = []
 		for i in tqdm(case_act_dict):
 			results.append(metapath_gen(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict))
@@ -75,7 +114,7 @@ def main():
 			for i in tqdm(results):
 				for j in i:
 					file.write(j)
-	if task == 2 or task == 4:
+	if task == 2 or task == 4 or task == 0:
 		metapath2vec(code_dir = metapath2vec_dir, outpath = outpath, embout = embout)
 	if task == 3:
 		distance(code_dir = metapath2vec_dir, embout = embout)

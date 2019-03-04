@@ -207,11 +207,39 @@ def distace(model, distpath, distout):
 	fo.close()
 	print("Similarity scores saved at "+distout)
 
+def read_final():
+	print('Reading Test data')
+	test = read_test('parth_kg_embed/test_cases.txt')
+	print('Making Case --> Act Dictionary')
+	case_sec_dict = {}
+	sec_case_dict = {}
+	bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+	with open('parth_kg_embed/final-docsec.txt', 'r') as file:
+		count = 0
+		for line in file:
+			bar.update(count)
+			count += 1
+			temp = line.split("-->")
+			if len(temp) == 1:
+				temp = line.split(".txt--->")
+			case = temp[0]
+			acts = temp[1].split('$$$')
+			if acts[-1][-1] == '\n':
+				acts[-1] = acts[-1][:-1]
+			case_sec_dict[case] = acts
+	case_sec_dict = dict(case_sec_dict, **test)
+	sec_case_dict = reverse_dict(case_sec_dict)
+	with open('saved/case_sec_dict.pickle', 'wb') as file:
+		pickle.dump(case_sec_dict, file)
+	with open('saved/sec_case_dict.pickle', 'wb') as file:
+		pickle.dump(sec_case_dict, file)
+	return case_sec_dict, sec_case_dict
+		
 
 if __name__ == '__main__':
 
 	gpath = 'saved/'
-	dict_path = 'saved/case_act_sec_dict.pickle'
+	dict_path = 'saved/case_sec_dict.pickle'
 	print('Enter 0 for analysis on small data')
 	print('Enter 1 to Read Data and save dictionaries')
 	print('Enter 2 to generate and save node2vec graph')
@@ -221,7 +249,7 @@ if __name__ == '__main__':
 	print('Enter 6 to do all')
 	q = int(input('Enter : '))
 	if q == 6:
-		c_a, a_c = read_data('parth_kg_embed/doc-sec-cit.txt')
+		c_a, a_c = read_final()
 		model = node2vec(node2vec_graph(c_a, gpath), gpath)
 		#Negative Samples
 		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim128.txt')
@@ -249,12 +277,17 @@ if __name__ == '__main__':
 			c_a = pickle.load(file)
 		G = node2vec_graph(c_a, gpath)
 	elif q == 1:
-		c_a, a_c = read_data('parth_kg_embed/doc-sec-cit.txt')
+		c_a, a_c = read_final()
 	elif q == 0:
 		c_a = read_test('parth_kg_embed/test_cases.txt')
 		a_c = reverse_dict(c_a)
 		a_c = correction(a_c)
 		c_a = reverse_dict(a_c)
+		print('Saving')
+		with open('saved/smallcase_act_sec_dict.pickle', 'wb') as file:
+			pickle.dump(c_a, file)
+		with open('saved/smallact_case_dict.pickle', 'wb') as file:
+			pickle.dump(a_c, file)
 		model = node2vec(node2vec_graph(c_a, gpath+'small'), gpath+'small')
 	else:
 		print('Invalid Choice')
