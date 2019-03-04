@@ -8,7 +8,7 @@ import multiprocessing
 from tqdm import tqdm
 pbar = ProgressBar()
 
-def metapath_gen(case, act_case_dict, outpath, numwalks, walklength, case_act_dict):
+def metapath_gen(case, act_case_dict, act_sec_dict, outpath, numwalks, walklength, case_act_dict):
 	#Generating meta-paths for metapath2vec
 	outfile = []
 	case0 = case
@@ -19,7 +19,11 @@ def metapath_gen(case, act_case_dict, outpath, numwalks, walklength, case_act_di
 			numa = len(acts)
 			actid = random.randrange(numa)
 			act = acts[actid]
-			outline += " " + str(act)
+			secs = act_sec_dict[act]
+			nums = len(secs)
+			sec_id = random.randrange(nums)
+			sec = secs[sec_id]
+			outline += " " + str(sec)
 			cases = act_case_dict[act]
 			numc = len(cases)
 			caseid = random.randrange(numc)
@@ -59,6 +63,7 @@ def reverse_dict(D):
 
 def make_acts_to_case(act_case_dict):
 	act_case = {}
+	act_sec = {}
 	print('Making act-->case dict')
 	for sec in tqdm(act_case_dict):
 		cases = act_case_dict[sec]
@@ -67,24 +72,30 @@ def make_acts_to_case(act_case_dict):
 			act_case[act].extend(cases)
 		except:
 			act_case[act] = cases
-	act_case = act_codes(act_case)
+		try:
+			act_sec[act].append(sec)
+		except:
+			act_sec[act] = [sec]
+	act_sec = sec_codes(act_sec)
 	print('Making case-->act dictionay')
 	case_act_dict = reverse_dict(act_case)
-	return case_act_dict, act_case
+	return case_act_dict, act_case, act_sec
 
-def act_codes(act_case_dict):
+def sec_codes(act_sec_dict):
 	print('Coding Acts')
+	sec_act_dict = reverse_dict(act_sec_dict)
 	j = 0
 	codes = {}
-	for i in act_case_dict:
-		codes[j] = act_case_dict[i]
+	for i in sec_act_dict:
+		codes[j] = sec_act_dict[i]
 		j += 1
+	codes = reverse_dict(codes)
 	return codes
 
 def main():
 	outpath = "saved/metapaths.txt"
 	embout = "saved/metapath2vec_embeddings"
-	metapath2vec_dir = "/Users/deepthought/code/docsim/code_metapath2vec"
+	metapath2vec_dir = "code_metapath2vec"
 
 	print("Please specify all the parameters and paths in the script itself")
 	print("Enter 0 to run on small network only")
@@ -98,17 +109,17 @@ def main():
 		walklength = 30
 		if task == 0:
 			with open('saved/smallact_case_dict.pickle', 'rb') as file:
-				act_case_dict = pickle.load(file)
+				act_case_sec_dict = pickle.load(file)
 			outpath = "saved/small_metapaths.txt"
 			embout = "saved/small_metapath2vec_embeddings"
 		else:	
 			with open('saved/sec_case_dict.pickle', 'rb') as file:
 				act_case_sec_dict = pickle.load(file)
-		case_act_dict, act_case_dict = make_acts_to_case(act_case_sec_dict)
+		case_act_dict, act_case_dict, act_sec_dict = make_acts_to_case(act_case_sec_dict)
 		num_cores = multiprocessing.cpu_count()
 		results = []
 		for i in tqdm(case_act_dict):
-			results.append(metapath_gen(case = i, act_case_dict = act_case_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict))
+			results.append(metapath_gen(case = i, act_case_dict = act_case_dict, act_sec_dict = act_sec_dict, outpath = outpath, numwalks = numwalks, walklength =  walklength, case_act_dict = case_act_dict))
 		print('Saving metapaths as txt')
 		with open(outpath, 'w') as file:
 			for i in tqdm(results):
