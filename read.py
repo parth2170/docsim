@@ -264,7 +264,7 @@ if __name__ == '__main__':
 		#Positive Samples
 		distace(model, 'parth_kg_embed/test/positive.txt', gpath+'node2vec_possim128.txt')
 	elif q == 4:
-		model = Word2Vec.load(gpath+'node2vec.model')
+		model = Word2Vec.load(gpath+'node2vec.model128')
 		#Negative Samples
 		distace(model, 'parth_kg_embed/test/negative.txt', gpath+'node2vec_negsim128.txt')
 		#Positive Samples
