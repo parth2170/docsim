@@ -147,7 +147,7 @@ def pathmaker(case_sec, sec_case, act_sec, sec_act, small):
 	print('Generating paths')
 	for case in tqdm(case_sec):
 		path1 = metapaths1(case, case_sec, sec_case, numwalks = 20, walklength = 10)
-		path2 = metapaths2(case, case_sec, sec_case, act_sec, sec_act, numwalks = 20, walklength = 5)
+		path2 = metapaths2(case, case_sec, sec_case, act_sec, sec_act, numwalks = 20, walklength = 10)
 		r1.append(path1)
 		r2.append(path2)
 	bp1 = open(small + "_paths1.txt", 'w')
@@ -187,11 +187,13 @@ def main():
 	act_sec, sec_act = readact()
 	case_sec = {**scase_sec, **bcase_sec}
 	sec_case = reverse_dict(case_sec)
+	# with open('cs.pickle', 'wb') as file:
+	# 	pickle.dump(case_sec, file)
 	print('Running Metapath2Vec')
 	pathmaker(case_sec, sec_case, act_sec, sec_act, small = "big")
-	#pathmaker(scase_sec, ssec_case, act_sec, sec_act, small = "small")
-	metapath2vec(small = "big", size = 64, types = 1)
-	metapath2vec(small = "big", size = 32, types = 2)
+	pathmaker(scase_sec, ssec_case, act_sec, sec_act, small = "small")
+	metapath2vec(small = "big", size = 32, types = 1)
+	metapath2vec(small = "big", size = 64, types = 2)
 	print('Running Node2Vec')
 	G = node2vec_graph(case_sec, gpath)
 
