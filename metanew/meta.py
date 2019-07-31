@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import random
 from tqdm import tqdm
+import psutil
 import os
 import datetime
 import networkx as nx
@@ -161,7 +162,7 @@ def pathmaker(case_sec, sec_case, act_sec, sec_act, small):
 	bp1.close()
 	bp2.close()
 
-def node2vec_graph(D, gpath):
+def node2vec_graph(D):
 	t1 = datetime.datetime.now()
 	G = nx.Graph(D)
 	print('Graph generated')
@@ -173,13 +174,40 @@ def node2vec_graph(D, gpath):
 	return G
 
 def node2vec(G):
-	embout = gpath+'Embeddings128'
-	node2vec = Node2Vec(G, dimensions=128, walk_length=30, num_walks=100, workers=int(psutil.cpu_count())) 
+	embout = 'node_big_emb'
+	node2vec = Node2Vec(G, dimensions=32, walk_length=20, num_walks=10, workers=int(psutil.cpu_count())) 
 	model = node2vec.fit(window=5, min_count=1, batch_words=5)
 	print('Saving')
 	model.wv.save_word2vec_format(embout)
-	model.save(gpath+'node2vec.model128')
+	model.save('node2vec.model')
 	return model
+
+
+def nodesim(model):
+	fo = open('nose_sim.txt', 'w')
+	text = []
+	ann = []
+	net = []
+	with open('../test_scores.txt', 'r') as file:
+		for line in file:
+			case1, case2 = line.split()[0], line.split()[1]
+			text.append(line.split()[-1])
+			ann.append(line.split()[-2])
+			try:
+				sim = model.wv.similarity(case1, case2)
+				net.append(sim)
+				outline = case1 + " " + case2 + " " + str(sim)
+				fo.write(outline + "\n")
+			except KeyError as error:
+				print(error)
+	ann = ann / np.linalg.norm(ann)
+	print('-----Correlations-----')
+	print('Text - Annotated = {}'.format(np.corrcoef(text, ann)[0][1]))
+	print('Text - Network = {}'.format(np.corrcoef(text, net)[0][1]))
+	print('Network - Annotated = {}'.format(np.corrcoef(net, ann)[0][1]))
+	fo.close()
+
+
 
 def main():
 	scase_sec, ssec_case = readsmall()
@@ -189,14 +217,14 @@ def main():
 	sec_case = reverse_dict(case_sec)
 	# with open('cs.pickle', 'wb') as file:
 	# 	pickle.dump(case_sec, file)
-	print('Running Metapath2Vec')
-	pathmaker(case_sec, sec_case, act_sec, sec_act, small = "big")
-	pathmaker(scase_sec, ssec_case, act_sec, sec_act, small = "small")
-	metapath2vec(small = "big", size = 32, types = 1)
-	metapath2vec(small = "big", size = 64, types = 2)
+	# print('Running Metapath2Vec')
+	# pathmaker(case_sec, sec_case, act_sec, sec_act, small = "big")
+	# pathmaker(scase_sec, ssec_case, act_sec, sec_act, small = "small")
+	# metapath2vec(small = "big", size = 32, types = 1)
+	# metapath2vec(small = "big", size = 64, types = 2)
 	print('Running Node2Vec')
-	G = node2vec_graph(case_sec, gpath)
-
+	G = node2vec_graph(case_sec)
+	model = node2vec(G)
 
 	
 if __name__ == '__main__':
